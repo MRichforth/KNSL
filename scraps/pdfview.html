@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;overflow:hidden}#wrap{transform-origin:0 0}</style></head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+<script type="module">
+import * as pdfjs from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.min.mjs';
+pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.worker.min.mjs';
+const doc = await pdfjs.getDocument('../uploads/pdf-1788115597646-mh27.pdf').promise;
+const page = await doc.getPage(1);
+const vp = page.getViewport({ scale: 2 });
+const c = document.getElementById('c');
+c.width = vp.width; c.height = vp.height;
+await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+const img = document.createElement('img');
+img.src = c.toDataURL('image/png');
+img.width = vp.width; img.height = vp.height;
+c.replaceWith(img);
+window.__ready = true;
+window.zoom = (s, x, y) => { const w = document.getElementById('wrap'); w.style.transform = `scale(${s}) translate(${-x}px,${-y}px)`; };
+window.zoom(1200 / vp.width, 0, 0);
+</script>
+</body></html>
