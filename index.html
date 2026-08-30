@@ -2,7 +2,11 @@
 <html lang="uk">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Інтерактивна 3D-модель фасаду Криворізького природничо-наукового ліцею: обертання, масштаб, експорт в OBJ/GLB.">
+<meta name="color-scheme" content="light">
 <title>Ліцей — 3D фасад</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236a6e75'/%3E%3Cpath d='M5 26V13l11-6 11 6v13z' fill='%23f2efe9'/%3E%3Crect x='14' y='18' width='4' height='8' fill='%238b4137'/%3E%3C/svg%3E">
 <script type="importmap">
 {
   "imports": {
@@ -23,15 +27,58 @@
 <style>
   html, body { margin: 0; height: 100%; background: #efeae4; }
   three-d-stage:not(:defined) { visibility: hidden; }
-  three-d-stage { display: block; width: 100vw; height: 100vh; }
+  three-d-stage { display: block; width: 100vw; height: 100dvh; }
+
+  /* Модель будується у top-level await: без цього екран лишався б порожнім
+     і під час завантаження, і після будь-якої помилки. */
+  #boot {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    padding: 24px;
+    background: #efeae4;
+    font: 400 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #4a453e;
+    text-align: center;
+    white-space: pre-line;
+  }
+  #boot.failed { color: #8a2f20; }
 </style>
 </head>
 <body>
 <three-d-stage name="lyceum-facade" background="#f2ece6"></three-d-stage>
+<p id="boot">Завантаження 3D-моделі…</p>
+<script>
+// Класичний скрипт — виконується до модуля, тому ловить і його помилки теж.
+(function () {
+  function fail(detail) {
+    var el = document.getElementById('boot');
+    if (!el || el.classList.contains('failed')) return;
+    el.classList.add('failed');
+    el.textContent =
+      'Не вдалося побудувати 3D-модель.\n\n' +
+      (detail || 'Невідома помилка') +
+      '\n\nСторінці потрібні WebGL та доступ до unpkg.com.';
+  }
+  window.addEventListener('error', function (e) {
+    fail(String((e && e.message) || ''));
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e && e.reason;
+    fail(String((r && r.message) || r || ''));
+  });
+})();
+</script>
 <script src="three-d-stage.js"></script>
 <script type="module">
 const stage = document.querySelector('three-d-stage');
 const { THREE } = await stage.ready;
+
+// Єдиний рантайм-ассет сторінки. Ім'я файлу — без пробілів: на GitHub Pages
+// шлях із пробілами доводиться кодувати, і будь-яке перейменування тихо ламає посилання.
+const EMBLEM_SRC = './uploads/2026-08-30-21-44-36.jpg';
 
 const M = {
   wall:   (() => {
@@ -354,32 +401,6 @@ for (const [gnm, GX, gz0, gz1] of [['grille_l', 26.95, 0, 1.32], ['grille_r', 38
 
 // емблема ліцею над вікнами входу
 {
-  const img = new Image();
-  // Load the local image through fetch/blob so the canvas remains same-origin.
-  const emblemResponse = await fetch('./uploads/2026-08-30%2021.44.36.jpg');
-  if (!emblemResponse.ok) throw new Error(`Failed to load emblem image: ${emblemResponse.status}`);
-  const emblemBlob = await emblemResponse.blob();
-  const emblemUrl = URL.createObjectURL(emblemBlob);
-  try {
-    img.src = emblemUrl;
-    await img.decode();
-  } finally {
-    URL.revokeObjectURL(emblemUrl);
-  }
-  const S = 720, cv = document.createElement('canvas');
-  cv.width = S; cv.height = S;
-  const cx2 = cv.getContext('2d');
-  cx2.drawImage(img, 30, 55, 760, 760, 0, 0, S, S);
-  const d = cx2.getImageData(0, 0, S, S);
-  for (let i = 0; i < d.data.length; i += 4) {
-    const [rr, gg, bb] = [d.data[i], d.data[i + 1], d.data[i + 2]];
-    if (rr < 46 && gg < 46 && bb < 46) d.data[i + 3] = 0;
-  }
-  cx2.putImageData(d, 0, 0);
-  const tex = new THREE.CanvasTexture(cv);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
-  const emblemMat = new THREE.MeshStandardMaterial({ name: 'emblem_knsl', color: 0xffffff, map: tex, transparent: true, roughness: 0.6 });
   // кругла опукла підставка: фронт білий, торець зелений
   const disc = new THREE.Mesh(
     new THREE.CylinderGeometry(0.62, 0.62, 0.14, 64),
@@ -391,10 +412,43 @@ for (const [gnm, GX, gz0, gz1] of [['grille_l', 26.95, 0, 1.32], ['grille_r', 38
   disc.castShadow = true; disc.receiveShadow = true;
   g.add(disc);
 
-  const emblem = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.1), emblemMat);
-  emblem.name = 'emblem_knsl';
-  emblem.position.set(32.75, 6.57, 0.145);
-  g.add(emblem);
+  // Емблема — декоративне накладання. Якщо світлина не завантажилась,
+  // лишаємо саму підставку: модель має будуватись до кінця в будь-якому разі.
+  try {
+    const img = new Image();
+    // Load the local image through fetch/blob so the canvas remains same-origin.
+    const emblemResponse = await fetch(EMBLEM_SRC);
+    if (!emblemResponse.ok) throw new Error(`HTTP ${emblemResponse.status} для ${EMBLEM_SRC}`);
+    const emblemBlob = await emblemResponse.blob();
+    const emblemUrl = URL.createObjectURL(emblemBlob);
+    try {
+      img.src = emblemUrl;
+      await img.decode();
+    } finally {
+      URL.revokeObjectURL(emblemUrl);
+    }
+    const S = 720, cv = document.createElement('canvas');
+    cv.width = S; cv.height = S;
+    const cx2 = cv.getContext('2d');
+    cx2.drawImage(img, 30, 55, 760, 760, 0, 0, S, S);
+    const d = cx2.getImageData(0, 0, S, S);
+    for (let i = 0; i < d.data.length; i += 4) {
+      const [rr, gg, bb] = [d.data[i], d.data[i + 1], d.data[i + 2]];
+      if (rr < 46 && gg < 46 && bb < 46) d.data[i + 3] = 0;
+    }
+    cx2.putImageData(d, 0, 0);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+    const emblemMat = new THREE.MeshStandardMaterial({ name: 'emblem_knsl', color: 0xffffff, map: tex, transparent: true, roughness: 0.6 });
+
+    const emblem = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.1), emblemMat);
+    emblem.name = 'emblem_knsl';
+    emblem.position.set(32.75, 6.57, 0.145);
+    g.add(emblem);
+  } catch (err) {
+    console.warn('Емблему не додано:', err);
+  }
 }
 
 // тераса перед входом + сходи
@@ -839,6 +893,9 @@ wrap.add(g);
 stage.setObject(wrap);
 env.position.copy(g.position);
 stage._scene.add(env);
+
+// Сцена готова — прибираємо заставку завантаження.
+document.getElementById('boot').remove();
 </script>
 </body>
 </html>
