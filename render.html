@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>КПНЛ — рендер фасаду</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+  }
+}
+</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #0d0e10; overflow: hidden; }
+  #frame {
+    position: fixed; inset: 0;
+    display: grid; place-items: center;
+  }
+  three-d-stage:not(:defined) { visibility: hidden; }
+  three-d-stage {
+    display: block; width: 100vw; height: 100dvh;
+    filter: contrast(1.05) saturate(1.04);
+  }
+  /* фінішна обробка кадру: вінєтка та легке зерно */
+  #grade {
+    position: fixed; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(120% 90% at 50% 42%, rgba(255,246,230,0.05) 0%, rgba(0,0,0,0) 55%, rgba(8,10,14,0.30) 100%);
+  }
+  #grain {
+    position: fixed; inset: 0; pointer-events: none; opacity: 0.055;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  #ui {
+    position: fixed; left: 16px; bottom: 16px; z-index: 5;
+    display: flex; flex-wrap: wrap; gap: 8px;
+    font: 500 13px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  #ui button {
+    padding: 9px 13px; border: 1px solid rgba(255,255,255,0.16); border-radius: 7px;
+    background: rgba(16,18,22,0.72); color: #eae6de; cursor: default;
+    backdrop-filter: blur(6px);
+  }
+  #ui button:hover { background: rgba(34,38,44,0.85); }
+  #ui button[data-on] { background: #eae6de; color: #16181c; }
+  #boot {
+    position: fixed; inset: 0; display: grid; place-items: center; margin: 0;
+    color: #8d8981; background: #0d0e10; z-index: 9;
+    font: 400 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+</style>
+</head>
+<body>
+<div id="frame">
+  <three-d-stage name="lyceum-render" data-render background="#0d0e10"></three-d-stage>
+</div>
+<div id="grade"></div>
+<div id="grain"></div>
+<div id="ui"></div>
+<p id="boot">Збирання кадру…</p>
+<script src="three-d-stage.js"></script>
+<script type="module" src="lyceum-scene.js"></script>
+<script type="module">
+const VIEWS = [
+  ['Фото-ракурс', [-37, 20, 47], [3, 3, 2], 38],
+  ['Вхід', [-6, 6.5, 26], [1.5, 2.6, 0], 42],
+  ['Витражі', [26, 9, 34], [22, 2.5, 0], 40],
+  ['Загальний', [-58, 34, 74], [0, 4, 0], 34],
+];
+
+const view = await new Promise((res) => {
+  if (window.lyceumView) return res(window.lyceumView);
+  window.addEventListener('lyceum-ready', () => res(window.lyceumView), { once: true });
+});
+
+// прибираємо службові елементи вьювера — у кадрі лише сцена
+const sr = view.stage.shadowRoot;
+sr.querySelectorAll('.toolbar, .note').forEach((el) => { el.style.display = 'none'; });
+
+const ui = document.getElementById('ui');
+function go(btn, [pos, tgt, fov]) {
+  ui.querySelectorAll('button').forEach((b) => b.removeAttribute('data-on'));
+  btn.setAttribute('data-on', '');
+  view.camera.position.set(...pos);
+  view.camera.fov = fov;
+  view.camera.updateProjectionMatrix();
+  view.controls.target.set(...tgt);
+  view.controls.update();
+}
+VIEWS.forEach(([label, pos, tgt, fov], i) => {
+  const b = document.createElement('button');
+  b.textContent = label;
+  b.addEventListener('click', () => go(b, [pos, tgt, fov]));
+  ui.appendChild(b);
+  if (i === 0) b.setAttribute('data-on', '');
+});
+
+const save = document.createElement('button');
+save.textContent = 'Зберегти PNG';
+save.addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.href = view.renderer.domElement.toDataURL('image/png');
+  a.download = 'knsl-facade-render.png';
+  a.click();
+});
+ui.appendChild(save);
+</script>
+</body>
+</html>
