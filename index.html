@@ -45,10 +45,51 @@
     white-space: pre-line;
   }
   #boot.failed { color: #8a2f20; }
+
+  /* Панель ракурсів — зверху ліворуч, щоб не перекривати підказку й кнопки експорту внизу. */
+  #views {
+    position: fixed;
+    top: max(16px, env(safe-area-inset-top));
+    left: max(16px, env(safe-area-inset-left));
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: min(640px, calc(100vw - 32px));
+    font: 500 12.5px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  #views[hidden] { display: none; }
+  #views .row { display: flex; flex-wrap: wrap; gap: 6px; }
+  #views button {
+    appearance: none;
+    flex: none;
+    border: 1px solid rgba(20, 20, 19, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.88);
+    color: #1a1915;
+    font: inherit;
+    padding: 8px 11px;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+  }
+  #views button:hover { background: #fff; }
+  #views button:focus-visible { outline: 2px solid #8b4137; outline-offset: 1px; }
+  #views button[aria-pressed="true"] { background: #1a1915; border-color: #1a1915; color: #f2efe9; }
+  #views .row.corners button { padding: 6px 9px; font-size: 11.5px; color: #4a453e; }
+  #views .row.corners button[aria-pressed="true"] { color: #f2efe9; }
+  /* На вузьких екранах рядки не переносяться, а гортаються — інакше 12 кнопок закрили б пів сцени. */
+  @media (max-width: 640px) {
+    #views .row { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    #views .row::-webkit-scrollbar { display: none; }
+  }
 </style>
 </head>
 <body>
 <three-d-stage name="lyceum-facade" background="#f2ece6"></three-d-stage>
+<nav id="views" aria-label="Ракурси" hidden>
+  <div class="row main"></div>
+  <div class="row corners"></div>
+</nav>
 <p id="boot">Завантаження 3D-моделі…</p>
 <script>
 // Класичний скрипт — виконується до модуля, тому ловить і його помилки теж.
@@ -73,5 +114,67 @@
 </script>
 <script src="three-d-stage.js"></script>
 <script type="module" src="lyceum-scene.js"></script>
+<script type="module">
+import { VIEWS, CORNER_VIEWS } from './lyceum-views.js';
+
+const view = await new Promise((res) => {
+  if (window.lyceumView) return res(window.lyceumView);
+  window.addEventListener('lyceum-ready', () => res(window.lyceumView), { once: true });
+});
+
+const nav = document.getElementById('views');
+const { camera, controls, THREE } = view;
+const O = view.modelOffset;
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let anim = 0;
+
+function press(btn) {
+  nav.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+}
+
+// Плавний переліт камери; цикл рендеру вьювера сам перемальовує кадр.
+function fly([pos, tgt, fov]) {
+  cancelAnimationFrame(anim);
+  const toPos = new THREE.Vector3(pos[0] + O.x, pos[1] + O.y, pos[2] + O.z);
+  const toTgt = new THREE.Vector3(tgt[0] + O.x, tgt[1] + O.y, tgt[2] + O.z);
+  const fromPos = camera.position.clone();
+  const fromTgt = controls.target.clone();
+  const fromFov = camera.fov;
+  const ms = reduceMotion ? 0 : 900;
+  const t0 = performance.now();
+  const step = (now) => {
+    const t = ms ? Math.min(1, (now - t0) / ms) : 1;
+    const k = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    camera.position.lerpVectors(fromPos, toPos, k);
+    controls.target.lerpVectors(fromTgt, toTgt, k);
+    camera.fov = fromFov + (fov - fromFov) * k;
+    camera.updateProjectionMatrix();
+    controls.update();
+    if (t < 1) anim = requestAnimationFrame(step);
+  };
+  anim = requestAnimationFrame(step);
+}
+
+function addButtons(row, list) {
+  list.forEach(([label, ...cfg]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = label;
+    b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', () => { press(b); fly(cfg); });
+    row.appendChild(b);
+  });
+}
+addButtons(nav.querySelector('.main'), VIEWS);
+addButtons(nav.querySelector('.corners'), CORNER_VIEWS);
+
+// Користувач сам крутить сцену — переліт зупиняємо, активний ракурс знімаємо.
+controls.addEventListener('start', () => {
+  cancelAnimationFrame(anim);
+  press(null);
+});
+
+nav.hidden = false;
+</script>
 </body>
 </html>
