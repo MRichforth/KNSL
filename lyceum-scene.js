@@ -1,3 +1,4 @@
+import * as FG from './facade-graphics.js';
 const stage = document.querySelector('three-d-stage');
 const { THREE } = await stage.ready;
 const RENDER = stage.hasAttribute('data-render');
@@ -123,7 +124,7 @@ function railBar(name, mat, x, z1, y1, z2, y2, radius) {
 
 const L = 66.1;                 // повна довжина фасаду, осі 1–4
 const AX3 = 39.0;               // вісь 3
-const D1 = 14.0, D2 = 20.0;     // глибина корпусів (прийнято, планів немає)
+const D1 = 14.0, D2 = 14.0;     // глибина корпусів (прийнято, планів немає)
 const GND = -1.58, PL = -0.38, TOP = 7.42;
 const SK = 0.30;                // товщина передньої "шкіри" стіни (глибина відкосу)
 function facadeSkin(prefix, xa, xb, ya, yb, openings) {
@@ -329,12 +330,12 @@ for (const [gnm, GX, gz0, gz1] of [['grille_l', 26.95, 0, 1.32], ['grille_r', 38
 {
   // кругла опукла підставка: фронт білий, торець зелений
   const disc = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.62, 0.62, 0.14, 64),
+    new THREE.CylinderGeometry(0.93, 0.93, 0.18, 64),
     [M.discEdge, M.discFace, M.discFace]
   );
   disc.name = 'emblem_base';
   disc.rotation.x = Math.PI / 2;
-  disc.position.set(32.75, 6.57, 0.07);
+  disc.position.set(64.15, 6.15, 0.09);
   disc.castShadow = true; disc.receiveShadow = true;
   g.add(disc);
 
@@ -368,9 +369,9 @@ for (const [gnm, GX, gz0, gz1] of [['grille_l', 26.95, 0, 1.32], ['grille_r', 38
     tex.anisotropy = 8;
     const emblemMat = new THREE.MeshStandardMaterial({ name: 'emblem_knsl', color: 0xffffff, map: tex, transparent: true, roughness: 0.6 });
 
-    const emblem = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.1), emblemMat);
+    const emblem = new THREE.Mesh(new THREE.PlaneGeometry(1.65, 1.65), emblemMat);
     emblem.name = 'emblem_knsl';
-    emblem.position.set(32.75, 6.57, 0.145);
+    emblem.position.set(64.15, 6.15, 0.185);
     g.add(emblem);
   } catch (err) {
     console.warn('Емблему не додано:', err);
@@ -484,10 +485,10 @@ for (const [bnm, bx] of [['flag_bracket_l', 29.75], ['flag_bracket_r', 35.75]]) 
 // декоративне плетіння: суцільна лінія обходить отвори
 {
   const stripeMats = {
-    blue: new THREE.MeshStandardMaterial({ name: 'stripe_blue', color: 0x0057b7, roughness: 0.6 }),
-    yellow: new THREE.MeshStandardMaterial({ name: 'stripe_yellow', color: 0xffd700, roughness: 0.6 }),
-    green: new THREE.MeshStandardMaterial({ name: 'stripe_green', color: 0x1a7a3c, roughness: 0.6 }),
-    red: new THREE.MeshStandardMaterial({ name: 'stripe_red', color: 0xc8102e, roughness: 0.6 }),
+    purple: new THREE.MeshStandardMaterial({ name: 'stripe_purple', color: 0x7b3fa0, roughness: 0.6 }),
+    blue: new THREE.MeshStandardMaterial({ name: 'stripe_blue', color: 0x2b7fd4, roughness: 0.6 }),
+    yellow: new THREE.MeshStandardMaterial({ name: 'stripe_yellow', color: 0xf2c318, roughness: 0.6 }),
+    green: new THREE.MeshStandardMaterial({ name: 'stripe_green', color: 0x6ab04a, roughness: 0.6 }),
   };
   const Z_PAINT = 0.012, T = 0.26;
   Object.values(stripeMats).forEach(mm => {
@@ -495,9 +496,13 @@ for (const [bnm, bx] of [['flag_bracket_l', 29.75], ['flag_bracket_r', 35.75]]) 
     mm.side = THREE.DoubleSide;
   });
 
-  // суцільна лента: одна геометрія вздовж кривої, спільні торці — без зубців
-  function ribbon(nm, mat, pts, offset, T) {
+  // суцільна лента: одна геометрія вздовж кривої, спільні торці — без зубців.
+  // avoid — прямокутники отворів: лента розривається на них, як фарба на фасаді,
+  // що зникає за відкосом вікна.
+  function strip(nm, mat, pts, T, zAt) {
     const n = pts.length;
+    if (n < 2) return null;
+    const Z = zAt === undefined ? Z_PAINT : zAt;
     const verts = [], idx = [], uvs = [];
     for (let i = 0; i < n; i++) {
       const p = pts[i];
@@ -505,9 +510,8 @@ for (const [bnm, bx] of [['flag_bracket_l', 29.75], ['flag_bracket_r', 35.75]]) 
       const tx = b[0] - a[0], ty = b[1] - a[1];
       const len = Math.hypot(tx, ty) || 1;
       const nx = -ty / len, ny = tx / len;
-      const cx = p[0] + nx * offset, cy = p[1] + ny * offset;
-      verts.push(cx - nx * T / 2, cy - ny * T / 2, Z_PAINT);
-      verts.push(cx + nx * T / 2, cy + ny * T / 2, Z_PAINT);
+      verts.push(p[0] - nx * T / 2, p[1] - ny * T / 2, Z);
+      verts.push(p[0] + nx * T / 2, p[1] + ny * T / 2, Z);
       uvs.push(0, 0, 1, 1);
       if (i < n - 1) { const k = i * 2; idx.push(k, k + 2, k + 1, k + 1, k + 2, k + 3); }
     }
@@ -518,28 +522,98 @@ for (const [bnm, bx] of [['flag_bracket_l', 29.75], ['flag_bracket_r', 35.75]]) 
     geo.computeVertexNormals();
     const m = new THREE.Mesh(geo, mat);
     m.name = nm;
-    g.add(m);
+    // ленти вимкнено: фасад лишається в основному кольорі
     return m;
   }
 
-  // плавна хвиля у глухому поясі: нічого не перекриває, без зламів
-  function band(nm, yMid, amp, period, phase, mats, xa, xb) {
-    const pts = [];
-    for (let x = xa; x <= xb; x += 0.08) {
-      pts.push([x, yMid + amp * Math.sin((2 * Math.PI * x) / period + phase)]);
-    }
-    mats.forEach((mat, k) => ribbon(nm + '_' + (k + 1), mat, pts, -(k - 0.5) * T, T));
+  function offsetPath(pts, offset) {
+    if (!offset) return pts;
+    const n = pts.length;
+    return pts.map((p, i) => {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
+      const tx = b[0] - a[0], ty = b[1] - a[1];
+      const len = Math.hypot(tx, ty) || 1;
+      return [p[0] - (ty / len) * offset, p[1] + (tx / len) * offset];
+    });
   }
 
-  // синьо-жовта — пояс між поверхами
-  band('weave_ua', 3.0, 0.18, 15, 0.4, [stripeMats.blue, stripeMats.yellow], 2.6, 25.0);
-  // зелено-червона — пояс над цоколем, поза зоною тераси
-  band('weave_kr', -0.1, 0.14, 17, 2.1, [stripeMats.green, stripeMats.red], 2.6, 25.0);
-  band('weave_kr2', -0.1, 0.14, 17, 2.1, [stripeMats.green, stripeMats.red], 39.6, L - 2.6);
-  // на блоці залів — вище вітражів
-  band('weave_ua_hall', 6.45, 0.16, 15, 1.1, [stripeMats.blue, stripeMats.yellow], 39.6, L - 2.6);
+  function ribbon(nm, mat, pts, offset, T, avoid, zAt) {
+    const path = offsetPath(pts, offset);
+    if (!avoid) return strip(nm, mat, path, T, zAt);
+    const hit = (p) => avoid.some(o => p[0] > o.x0 && p[0] < o.x1 && p[1] > o.y0 && p[1] < o.y1);
+    let run = [], k = 0;
+    const flush = () => { if (run.length > 1) strip(nm + '_' + (++k), mat, run, T, zAt); run = []; };
+    path.forEach(p => { if (hit(p)) flush(); else run.push(p); });
+    flush();
+    return null;
+  }
 
-  // білий орнамент по краях фасаду
+  // ламана лінія у глухому поясі: горизонтальні прогони з переломами під 45°
+  function chevron(nm, yMid, amp, period, phase, mats, xa, xb, zPos = 0) {
+    const pts = [];
+    for (let x = xa; x <= xb; x += 0.05) {
+      const t = (((x - xa) / period + phase) % 1 + 1) % 1;
+      const tri = t < 0.25 ? t * 4 : t < 0.75 ? 2 - 4 * t : -4 + 4 * t;
+      pts.push([x, yMid + amp * tri]);
+    }
+    mats.forEach((mat, k) => {
+      const m = ribbon(nm + '_' + (k + 1), mat, pts, -(k - (mats.length - 1) / 2) * T, T);
+      m.position.z = zPos;
+    });
+  }
+
+  // ліва частина ліцею — ламані ленти як на знімку: довгі горизонталі в глухих
+  // поясах, переходи між поясами — крутою діагоналлю в простінку між вікнами
+  function resample(nodes, step = 0.05) {
+    const out = [];
+    for (let i = 0; i < nodes.length - 1; i++) {
+      const [x0, y0] = nodes[i], [x1, y1] = nodes[i + 1];
+      const len = Math.hypot(x1 - x0, y1 - y0);
+      const n = Math.max(1, Math.ceil(len / step));
+      for (let k = 0; k < n; k++) out.push([x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n]);
+    }
+    out.push(nodes[nodes.length - 1]);
+    return out;
+  }
+  // пара лент: товста веде лінію, тонка йде вплотну
+  function ribbonPair(nm, nodes, matA, tA, matB, tB, side, avoid, zAt) {
+    const pts = resample(nodes);
+    ribbon(nm + '_main', matA, pts, 0, tA, avoid, zAt);
+    ribbon(nm + '_thin', matB, pts, side * (tA / 2 + tB / 2 + 0.04), tB, avoid, zAt);
+  }
+
+  const YT = 6.5, YM = 3.03, YB = -0.02;    // глухі пояси: над 2-м поверхом, міжповерховий, над цоколем
+  // отвори лівої частини: діагоналі проходять по стіні й зникають за відкосами вікон
+  const AVOID = [
+    ...Array.from({ length: 12 }, (_, i) => ({ x0: 4.25 + 3 * i - 0.99, x1: 4.25 + 3 * i + 0.99, y0: 3.63, y1: 5.81 })),
+    ...Array.from({ length: 8 }, (_, i) => ({ x0: 4.25 + 3 * i - 0.99, x1: 4.25 + 3 * i + 0.99, y0: i === 0 ? 0.75 : 0.25, y1: 2.43 })),
+  ];
+
+  // діагоналі під 45°: перепад пояса дорівнює зміщенню по х
+  const dTM = YT - YM, dMB = YM - YB;
+
+  // фіолетова з зеленою: від парапету вниз ліворуч, двома сходинками до цоколя
+  ribbonPair('line_a', [
+    [0.7, YT], [2.5, YT], [2.5 + dTM, YM],
+    [9.5, YM], [9.5 + dMB, YB], [24.9, YB],
+  ], stripeMats.purple, 0.58, stripeMats.green, 0.26, 1, AVOID, 0.013);
+
+  // синя з жовтою: назустріч, від цоколя вгору до парапету
+  ribbonPair('line_b', [
+    [0.7, YB], [8.95, YB], [8.95 + dMB, YM],
+    [16.5, YM], [16.5 + dTM, YT], [24.9, YT],
+  ], stripeMats.blue, 0.52, stripeMats.yellow, 0.34, -1, AVOID, 0.021);
+
+  // щільний вузол у лівого краю: жовта з зеленою вгору до парапету
+  ribbonPair('line_c', [
+    [0.7, YM], [1.5, YM], [1.5 + dTM, YT], [9.6, YT],
+  ], stripeMats.yellow, 0.36, stripeMats.green, 0.2, -1, AVOID, 0.029);
+
+  // тераса — ламана смуга по фронту плити, обабіч сходів
+  chevron('line_terrace_l', -1.02, 0.09, 4.5, 0.2, [stripeMats.purple, stripeMats.yellow], 25.85, 27.15, 3.31);
+  chevron('line_terrace_r', -1.02, 0.09, 4.5, 0.2, [stripeMats.purple, stripeMats.yellow], 32.85, 38.9, 3.31);
+
+  // білий орнамент по лівому краю фасаду
   const ornMat = new THREE.MeshStandardMaterial({ name: 'ornament_white', color: 0xf4f2ec, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
   function ornamentBand(nm, cx) {
     let n = 0;
@@ -555,8 +629,201 @@ for (const [bnm, bx] of [['flag_bracket_l', 29.75], ['flag_bracket_r', 35.75]]) 
     box(nm + '_edge_l', ornMat, cx - 0.5, PL + 0.2, 0, 0.06, TOP - PL - 0.4, 0.014);
     box(nm + '_edge_r', ornMat, cx + 0.44, PL + 0.2, 0, 0.06, TOP - PL - 0.4, 0.014);
   }
-  ornamentBand('ornament_l', 1.6);
-  ornamentBand('ornament_r', L - 1.6);
+
+
+  // добудова за фото: зʼєднувальний 2-поверховий корпус і 3-поверховий задній корпус.
+  // Існуючий фронтальний корпус не змінюється — лише накладні вікна й ленти на його тильних стінах.
+  {
+    const ext = new THREE.Group();
+    ext.name = 'lyceum_extension';
+    g.add(ext);
+    const TOP3 = TOP + 3.38, FL = [0.34, 3.72, 7.10];
+    const RX0 = -0.5, RX1 = L, RZ0 = -46, RZ1 = -32;
+    const KX0 = 26.8, KX1 = 38.8, KZ1 = -D1;
+    function face(nm, dir, fixed, a, b) {
+      const p = new THREE.Group();
+      p.name = nm;
+      if (dir === 'S') p.position.set(a, 0, fixed);
+      if (dir === 'N') { p.position.set(b, 0, fixed); p.rotation.y = Math.PI; }
+      if (dir === 'W') { p.position.set(fixed, 0, a); p.rotation.y = -Math.PI / 2; }
+      if (dir === 'E') { p.position.set(fixed, 0, b); p.rotation.y = Math.PI / 2; }
+      ext.add(p);
+      return p;
+    }
+    function skin(p, pre, ua, ub, ya, yb, ops) {
+      const ys = new Set([ya, yb]);
+      ops.forEach(o => { ys.add(Math.max(ya, o.y0)); ys.add(Math.min(yb, o.y1)); });
+      const yl = [...ys].sort((q, r) => q - r);
+      let k = 0;
+      for (let i = 0; i < yl.length - 1; i++) {
+        const y0 = yl[i], y1 = yl[i + 1], mid = (y0 + y1) / 2;
+        const act = ops.filter(o => o.y0 < mid && o.y1 > mid).sort((q, r) => q.x0 - r.x0);
+        let cur = ua;
+        for (const o of act) {
+          if (o.x0 > cur) box(pre + '_' + (++k), M.wall, cur, y0, -SK, o.x0 - cur, y1 - y0, SK, p);
+          cur = Math.max(cur, o.x1);
+        }
+        if (cur < ub) box(pre + '_' + (++k), M.wall, cur, y0, -SK, ub - cur, y1 - y0, SK, p);
+      }
+    }
+    // flat = накладне вікно на глуху стіну існуючого корпусу
+    function win(p, nm, cu, y0, flat, w = 1.8, h = 2.0) {
+      const x0 = cu - w / 2, fr = 0.09, z = flat ? 0.01 : -SK;
+      box(nm + '_glass', M.glass, x0 + fr, y0 + fr, flat ? 0.015 : z - 0.03, w - 2 * fr, h - 2 * fr, flat ? 0.03 : 0.05, p);
+      box(nm + '_frame_l', M.frame, x0, y0, z, fr, h, flat ? 0.08 : 0.12, p);
+      box(nm + '_frame_r', M.frame, x0 + w - fr, y0, z, fr, h, flat ? 0.08 : 0.12, p);
+      box(nm + '_frame_b', M.frame, x0, y0, z, w, fr, flat ? 0.08 : 0.12, p);
+      box(nm + '_frame_t', M.frame, x0, y0 + h - fr, z, w, fr, flat ? 0.08 : 0.12, p);
+      box(nm + '_transom', M.frame, x0, y0 + h - 0.55, z, w, 0.07, flat ? 0.08 : 0.12, p);
+      box(nm + '_mullion', M.frame, cu - 0.035, y0, z, 0.07, h - 0.55, flat ? 0.08 : 0.12, p);
+      box(nm + '_sill', M.frame, x0 - 0.12, y0 - 0.09, flat ? 0.01 : -SK, w + 0.24, 0.09, flat ? 0.18 : SK + 0.2, p);
+    }
+    const op = (cu, y0) => ({ x0: cu - 0.9, x1: cu + 0.9, y0, y1: y0 + 2.0 });
+    const av = (o) => ({ x0: o.x0 - 0.09, x1: o.x1 + 0.09, y0: o.y0 - 0.09, y1: o.y1 + 0.09 });
+    function band(p, nm, nodes, mA, tA, mB, tB, side, avoid, z) {
+      const pts = resample(nodes);
+      const run = (sub, mat, off, T) => {
+        const path = offsetPath(pts, off);
+        const hit = q => avoid.some(o => q[0] > o.x0 && q[0] < o.x1 && q[1] > o.y0 && q[1] < o.y1);
+        let r = [], k = 0;
+        const flush = () => { if (r.length > 1) { strip(nm + sub + (++k), mat, r, T, z); } r = []; };
+        path.forEach(q => { if (hit(q)) flush(); else r.push(q); });
+        flush();
+      };
+      run('_main_', mA, 0, tA);
+      if (mB) run('_thin_', mB, side * (tA / 2 + tB / 2 + 0.04), tB);
+    }
+    const S = stripeMats;
+    // фасад з вікнами: шкіра з отворами, вікна, ленти
+    function facadeWin(p, pre, len, yTop, cols, floors, flat) {
+      const ops = [];
+      cols.forEach((cu, i) => floors.forEach((fy, f) => {
+        ops.push(op(cu, fy));
+        win(p, pre + '_win_' + (f + 1) + 'f_' + (i + 1), cu, fy, flat);
+      }));
+      if (!flat) skin(p, pre + '_skin', 0, len, PL, yTop, ops);
+      return ops.map(av);
+    }
+    const YB = -0.02, Y2 = 3.03, Y3 = 6.41, Y4 = 9.95, YT2 = 6.5;
+
+    // зʼєднувальний корпус
+    box('ext_link_plinth', M.plinth, KX0 - 0.08, GND, RZ1, KX1 - KX0 + 0.16, PL - GND, KZ1 - RZ1, ext);
+    box('ext_link_core', M.wall, KX0 + SK, PL, RZ1, KX1 - KX0 - 2 * SK, TOP - PL, KZ1 - RZ1, ext);
+    const linkCols = [2, 4.8, 7.6, 10.4, 13.2, 16];
+    const fKW = face('ext_link_w', 'W', KX0, RZ1, KZ1);
+    const aKW = facadeWin(fKW, 'ext_link_w', 18, TOP, linkCols, FL.slice(0, 2), false);
+    band(fKW, 'ext_link_w_a', [[0.4, YT2], [3.4, YT2], [6.87, Y2], [17.7, Y2]], S.yellow, 0.36, S.blue, 0.3, -1, aKW, 0.013);
+    band(fKW, 'ext_link_w_b', [[9, YT2], [17.7, YT2]], S.green, 0.26, null, 0, 0, aKW, 0.021);
+    const fKE = face('ext_link_e', 'E', KX1, RZ1, KZ1);
+    const aKE = facadeWin(fKE, 'ext_link_e', 18, TOP, linkCols, FL.slice(0, 2), false);
+    band(fKE, 'ext_link_e_a', [[0.4, Y2], [8.8, Y2], [12.27, YT2], [17.7, YT2]], S.yellow, 0.36, S.blue, 0.3, 1, aKE, 0.013);
+    band(fKE, 'ext_link_e_b', [[0.4, YB], [17.7, YB]], S.purple, 0.4, null, 0, 0, aKE, 0.021);
+    box('ext_link_parapet_w', M.black, KX0 - 0.2, TOP, RZ1, 0.32, PAR, KZ1 - RZ1, ext);
+    box('ext_link_parapet_e', M.black, KX1 - 0.12, TOP, RZ1, 0.32, PAR, KZ1 - RZ1, ext);
+    box('ext_link_roof', M.roof, KX0 + 0.2, TOP - 0.02, RZ1, KX1 - KX0 - 0.4, 0.06, KZ1 - RZ1 - 0.2, ext);
+
+    // задній триповерховий корпус
+    box('ext_rear_plinth', M.plinth, RX0 - 0.08, GND, RZ0 - 0.08, RX1 - RX0 + 0.16, PL - GND, RZ1 - RZ0 + 0.16, ext);
+    box('ext_rear_core', M.wall, RX0 + SK, PL, RZ0 + SK, RX1 - RX0 - 2 * SK, TOP3 - PL, RZ1 - RZ0 - 2 * SK, ext);
+    const RW = RX1 - RX0, RD = RZ1 - RZ0;
+    const rearX = Array.from({ length: 21 }, (_, i) => 2.5 + 3 * i);
+    const fRS = face('ext_rear_s', 'S', RZ1, RX0, RX1);
+    const aRS = facadeWin(fRS, 'ext_rear_s', RW, TOP3, rearX.filter(x => x < KX0 - 1 || x > KX1 + 1).map(x => x - RX0), FL, false);
+    band(fRS, 'ext_rear_s_a', [[0.4, Y4], [4.5, Y4], [8.04, Y3], [13.5, Y3], [16.88, Y2], [26.6, Y2]], S.purple, 0.58, S.blue, 0.3, 1, aRS, 0.013);
+    band(fRS, 'ext_rear_s_b', [[40, Y2], [42, Y2], [45.38, Y3], [47, Y3], [50.54, Y4], [66.2, Y4]], S.yellow, 0.36, S.green, 0.22, -1, aRS, 0.021);
+    band(fRS, 'ext_rear_s_c', [[40, YB], [48, YB], [51.05, Y2], [66.2, Y2]], S.blue, 0.52, S.purple, 0.3, -1, aRS, 0.029);
+    const fRN = face('ext_rear_n', 'N', RZ0, RX0, RX1);
+    const aRN = facadeWin(fRN, 'ext_rear_n', RW, TOP3, rearX.map(x => RX1 - x), FL, false);
+    band(fRN, 'ext_rear_n_a', [[0.4, Y4], [8, Y4], [11.54, Y3], [24, Y3], [27.38, Y2], [40, Y2], [43.05, YB], [66.2, YB]], S.purple, 0.58, S.green, 0.26, 1, aRN, 0.013);
+    band(fRN, 'ext_rear_n_b', [[0.4, YB], [12, YB], [15.05, Y2], [22.5, Y2]], S.blue, 0.52, S.yellow, 0.34, -1, aRN, 0.021);
+    band(fRN, 'ext_rear_n_c', [[30, Y4], [44, Y4], [47.54, Y3], [66.2, Y3]], S.yellow, 0.36, S.green, 0.22, -1, aRN, 0.029);
+    const fRW = face('ext_rear_w', 'W', RX0, RZ0, RZ1);
+    skin(fRW, 'ext_rear_w_skin', SK, RD - SK, PL, TOP3, []);
+    band(fRW, 'ext_rear_w_a', [[0.4, 8.8], [3.0, 8.8], [6.6, 5.2], [13.6, 5.2]], S.yellow, 0.36, S.green, 0.22, -1, [], 0.013);
+    band(fRW, 'ext_rear_w_b', [[0.4, 1.6], [7.5, 1.6], [9.8, 3.9], [13.6, 3.9]], S.blue, 0.52, S.purple, 0.3, -1, [], 0.021);
+    const fRE = face('ext_rear_e', 'E', RX1, RZ0, RZ1);
+    skin(fRE, 'ext_rear_e_skin', SK, RD - SK, PL, TOP3, []);
+    band(fRE, 'ext_rear_e_a', [[0.4, 4.4], [6, 4.4], [9.8, 8.2], [13.6, 8.2]], S.purple, 0.58, S.green, 0.26, 1, [], 0.013);
+    band(fRE, 'ext_rear_e_b', [[0.4, 1.0], [8.5, 1.0], [10.8, 3.3], [13.6, 3.3]], S.blue, 0.52, S.yellow, 0.34, -1, [], 0.021);
+    box('ext_rear_parapet_s', M.black, RX0 - 0.1, TOP3, RZ1 - 0.2, RW + 0.2, PAR, 0.32, ext);
+    box('ext_rear_parapet_n', M.black, RX0 - 0.1, TOP3, RZ0 - 0.12, RW + 0.2, PAR, 0.32, ext);
+    box('ext_rear_parapet_w', M.black, RX0 - 0.12, TOP3, RZ0 - 0.1, 0.32, PAR, RD + 0.2, ext);
+    box('ext_rear_parapet_e', M.black, RX1 - 0.2, TOP3, RZ0 - 0.1, 0.32, PAR, RD + 0.2, ext);
+    box('ext_rear_roof', M.roof, RX0 + 0.2, TOP3 - 0.02, RZ0 + 0.2, RW - 0.4, 0.06, RD - 0.4, ext);
+
+    // тильні стіни існуючого корпусу: накладні вікна класів і ленти
+    const fCB = face('ext_cls_back', 'N', -D1, -0.5, AX3);
+    const clsBackX = [4.25, 7.25, 10.25, 13.25, 16.25, 19.25, 22.25];
+    const aCB = facadeWin(fCB, 'ext_cls_back', AX3 + 0.5, TOP, clsBackX.map(x => AX3 - x), FL.slice(0, 2), true);
+    band(fCB, 'ext_cls_back_a', [[17.3, YB], [23, YB], [26.05, Y2], [30, Y2], [33.47, YT2], [39.2, YT2]], S.purple, 0.58, S.green, 0.26, 1, aCB, 0.013);
+    band(fCB, 'ext_cls_back_b', [[12.5, YT2], [16, YT2]], S.yellow, 0.36, S.blue, 0.3, -1, aCB, 0.021);
+    const fHB = face('ext_hall_back', 'N', -D2, AX3, L);
+    band(fHB, 'ext_hall_back_a', [[0.3, 0.9], [8, 0.9], [12.6, 5.5], [26.8, 5.5]], S.blue, 0.52, S.yellow, 0.34, -1, [], 0.013);
+    band(fHB, 'ext_hall_back_b', [[14.5, 0.9], [26.8, 0.9]], S.purple, 0.58, S.green, 0.26, 1, [], 0.021);
+
+    // фасадна суперграфіка: уся геометрія ліній — з facade-graphics.js (погоджені розгортки)
+    {
+      // стіна моделі для кожної розгортки: [напрям нормалі, фіксована координата, початок відліку u]
+      const WALL = {
+        F_S: ['S', 0, RX0], F_E: ['E', L, 0], HB: ['N', -D2, L], KE: ['E', KX1, KZ1],
+        RS: ['S', RZ1, RX0], RE: ['E', RX1, RZ1], RN: ['N', RZ0, RX1], RW: ['W', RX0, RZ0],
+        KW: ['W', KX0, RZ1], CB: ['N', -D1, KX0], F_W: ['W', RX0, -D1],
+      };
+      const at = ([dir, fx, o], u, y, off) =>
+        dir === 'S' ? [o + u, y, fx + off] : dir === 'N' ? [o - u, y, fx - off] :
+        dir === 'E' ? [fx + off, y, o - u] : [fx - off, y, o + u];
+      const aniso = stage._renderer.capabilities.getMaxAnisotropy();
+      const tile = (bg, seam) => {
+        const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+        const c = cv.getContext('2d');
+        c.fillStyle = bg; c.fillRect(0, 0, 256, 256);
+        c.fillStyle = seam; c.fillRect(0, 0, 2, 256); c.fillRect(0, 254, 256, 2);
+        const t = new THREE.CanvasTexture(cv);
+        t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = aniso;
+        return t;
+      };
+      // toneMapped: false — ACES знебарвлював фарбу (жовтий ішов у беж); без нього відтінок читається як задано
+      const matte = (name, extra, factor) => new THREE.MeshStandardMaterial({ name, roughness: 0.8, metalness: 0, side: THREE.DoubleSide, toneMapped: false,
+        polygonOffset: true, polygonOffsetFactor: factor, polygonOffsetUnits: factor, ...extra });
+      const cladMat = matte('cladding_panel_graphite', { map: tile(FG.CLAD, FG.SEAM) }, -2);
+      const seamMap = tile('#FFFFFF', '#ADADAD');   // шов панелі видно крізь фарбу
+      const lineMat = Object.fromEntries(Object.entries(FG.COL).map(([k, hex]) => [k, matte('graphic_' + k, { color: new THREE.Color(hex), map: seamMap }, -4)]));
+      const OFF = { violet: 0.010, blue: 0.011, yellow: 0.012, green: 0.013 };
+
+      const build = (grp, nm, mat, polys, W, off) => {
+        const pos = [], uv = [], idx = [];
+        for (const p of polys) {
+          const b0 = pos.length / 3;
+          p.forEach(([u, y]) => { pos.push(...at(W, u, y, off)); uv.push(u / FG.PANEL, (y - FG.PL) / FG.PANEL); });
+          for (let k = 1; k < p.length - 1; k++) idx.push(b0, b0 + k, b0 + k + 1);
+        }
+        if (!idx.length) return;
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+        geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+        geo.setIndex(idx); geo.computeVertexNormals();
+        const m = new THREE.Mesh(geo, mat);
+        m.name = nm; m.receiveShadow = true;
+        grp.add(m);
+      };
+      const all = new THREE.Group(); all.name = 'facade_graphics'; ext.add(all);
+      for (const f of FG.FACADES) {
+        const W = WALL[f.id], grp = new THREE.Group();
+        grp.name = 'facade_graphics_' + f.id; all.add(grp);
+        const byC = {};
+        FG.facadePieces(f, { ext: 0.014 }).forEach(p => { (byC[p.c] = byC[p.c] || []).push(...p.polys); });
+        for (const c of Object.keys(byC)) build(grp, f.id + '_' + c, lineMat[c], byC[c], W, OFF[c]);
+      }
+    }
+
+    // обладнання покрівлі добудови
+    const dm = new THREE.MeshStandardMaterial({ name: 'roof_duct', color: 0xb9b3a8, roughness: 0.85 });
+    const dc = new THREE.MeshStandardMaterial({ name: 'roof_duct_cap', color: 0x8f8a80, roughness: 0.8 });
+    [[4, -40, TOP3], [12, -37, TOP3], [20, -41.5, TOP3], [29, -38, TOP3], [38, -41, TOP3], [46, -37.5, TOP3], [54, -40.5, TOP3], [62, -37, TOP3], [31, -25, TOP], [34.5, -19, TOP]].forEach(([x, z, y], i) => {
+      box('ext_roof_duct_' + (i + 1), dm, x, y + 0.04, z, 1.0, 0.7, 0.8, ext);
+      box('ext_roof_duct_' + (i + 1) + '_cap', dc, x - 0.1, y + 0.74, z - 0.1, 1.2, 0.07, 1.0, ext);
+    });
+  }
 }
 
 // водостічна труба
@@ -1009,8 +1276,28 @@ let skyTex = null;
   }
 }
 
-// центрування: y-up, база на y=0
+// двір добудови: дерева з плями забудови прибираємо, внутрішні двори мостимо
+{
+  const drop = new Set();
+  env.children.forEach(o => {
+    const m = /^tree_(\d+)_trunk$/.exec(o.name);
+    if (m && o.position.x > -7 && o.position.x < 73 && o.position.z > -53 && o.position.z < -10) drop.add(m[1]);
+  });
+  env.children.filter(o => { const m = /^tree_(\d+)_/.exec(o.name); return m && drop.has(m[1]); }).forEach(o => env.remove(o));
+  const court = new THREE.MeshStandardMaterial({ name: 'yard_paving_court', color: 0xa9a69d, roughness: 0.92 });
+  box('court_paving_w', court, -4, GND, -32, 30.8, 0.04, 18, env);
+  box('court_paving_e', court, 38.8, GND, -32, 30.2, 0.04, 18, env);
+  box('rear_walk', court, -4, GND, -50, 74, 0.04, 18, env);
+}
+
+// дерева, кущі, машини й люди прибрано
+env.children.filter(o => /^(tree_|bush_|car_|figure_)/.test(o.name)).forEach(o => env.remove(o));
+
+// центрування: y-up, база на y=0 — лише за фронтальним корпусом, щоб ракурси не зсунулись
+const extG = g.getObjectByName('lyceum_extension');
+if (extG) g.remove(extG);
 const bb = new THREE.Box3().setFromObject(g);
+if (extG) g.add(extG);
 g.position.set(-(bb.min.x + bb.max.x) / 2, -bb.min.y, -(bb.min.z + bb.max.z) / 2);
 const wrap = new THREE.Group();
 wrap.name = 'lyceum';
@@ -1075,7 +1362,7 @@ stage._scene.add(env);
   ct.update();
 
   // доступ для сторінки рендеру (ракурси, збереження кадру)
-  window.lyceumView = { stage, scene: sc, renderer: rn, camera: cam, controls: ct, THREE };
+  window.lyceumView = { stage, scene: sc, renderer: rn, camera: cam, controls: ct, THREE, modelOffset: g.position.clone() };
   window.dispatchEvent(new CustomEvent('lyceum-ready'));
 }
 

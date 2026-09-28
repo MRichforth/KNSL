@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#EEEDEA;} a{color:#3A56F0;} a:hover{color:#7B3FE4;}</style>
+</helmet>
+<div ref="{{ rootRef }}" style="font-family:'IBM Plex Sans',sans-serif;color:#1C1D21;padding:40px 32px 72px;max-width:1800px;margin:0 auto;display:flex;flex-direction:column;gap:44px;box-sizing:border-box">
+  <header style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-end;justify-content:space-between">
+    <div style="display:flex;flex-direction:column;gap:12px;max-width:720px">
+      <div style="font:500 12px 'IBM Plex Mono',monospace;letter-spacing:0.04em;color:#5c5e63">КПНЛ · фасадна суперграфіка · етап 1 з 2 — на погодження</div>
+      <h1 style="margin:0;font-weight:600;font-size:40px;line-height:1.1;letter-spacing:-0.01em">Розгортки фасадів</h1>
+      <p style="margin:0;font-size:15px;line-height:1.55;color:#3d3f44;text-wrap:pretty">Лінії задано в одній координаті обходу периметра (334,4 м), тому на кутах вони переходять на сусідній фасад на тій самій висоті. Ряди нижче йдуть по периметру без розривів, в одному масштабі. Вікна лишаються поверх ліній.</p>
+    </div>
+    <canvas data-plan="1" style="width:320px;max-width:100%;display:block"></canvas>
+  </header>
+
+  <div style="display:flex;flex-wrap:wrap;gap:12px 28px;font:500 12px 'IBM Plex Mono',monospace;color:#3d3f44">
+    <div style="display:flex;gap:8px;align-items:center"><span style="width:36px;height:14px;background:#7B3FE4"></span>Фіолетовий #7B3FE4 · 0,55 м</div>
+    <div style="display:flex;gap:8px;align-items:center"><span style="width:36px;height:10px;background:#3A56F0"></span>Ультрамарин #3A56F0 · 0,38 м</div>
+    <div style="display:flex;gap:8px;align-items:center"><span style="width:36px;height:5px;background:#F2E01C"></span>Жовтий #F2E01C · 0,18 м</div>
+    <div style="display:flex;gap:8px;align-items:center"><span style="width:36px;height:4px;background:#7ED321"></span>Лайм #7ED321 · 0,15 м</div>
+    <div style="display:flex;gap:8px;align-items:center"><span style="width:36px;height:14px;background:#1C1D21;outline:1px solid #3A3D43"></span>Облицювання #1C1D21 · панель 1,2 × 1,2 м</div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:28px">
+    <div style="font:500 12px 'IBM Plex Mono',monospace;color:#5c5e63">ОБХІД ПЕРИМЕТРА · ЄДИНИЙ МАСШТАБ · кінець ряду продовжується на початку наступного</div>
+
+    <div style="width:100%;display:flex;gap:4px;align-items:flex-end">
+      <figure style="flex:14 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:6px">
+        <figcaption style="display:flex;flex-wrap:wrap;gap:4px 8px;font:500 11px 'IBM Plex Mono',monospace;color:#3d3f44"><b>11</b><span>Торець, захід</span><span style="color:#7a7c81">{{ cov.F_W }}</span></figcaption>
+        <canvas data-view="F_W" style="width:100%;display:block"></canvas>
+      </figure>
+      <figure style="flex:66.6 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:6px">
+        <figcaption style="display:flex;flex-wrap:wrap;gap:4px 8px;font:500 11px 'IBM Plex Mono',monospace;color:#3d3f44"><b>01</b><span>Головний фасад</span><span style="color:#7a7c81">{{ cov.F_S }}</span></figcaption>
+        <canvas data-view="F_S" style="width:100%;display:block"></canvas>
+      </figure>
+      <figure style="flex:14 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:6px">
+        <figcaption style="display:flex;flex-wrap:wrap;gap:4px 8px;font:500 11px 'IBM Plex Mono',monospace;color:#3d3f44"><b>02</b><span>Торець, схід</span><span style="color:#7a7c81">{{ cov.F_E }}</span></figcaption>
+        <canvas data-view="F_E" style="width:100%;display:block"></canvas>
+      </figure>
+    </div>
+
+    <div style="width:91.5%;display:flex;gap:4px;align-items:flex-end">
+      <figure style="flex:27.3 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:6px">
+        <figcaption style="display:flex;flex-wrap:wrap;gap:4px 8px;font:500 11px 'IBM Plex Mono',monospace;color:#3d3f44"><b>03</b><span>Тил блоку залів</span><span style="color:#7a7c81">{{ cov.HB }}</span></figcaption>
+        <canvas data-view="HB" style="width:100%;display:block"></canvas>
+      </figure>
+      <figure style="flex:18 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:6px">
+        <figcaption style="display:flex;flex-wrap:wrap;gap:4px 8px;font:500 11px 'IBM Plex Mono',monospace;color:#3d3f44"><b>04</b><span>Перехід, схід</span><span style="color:#7a7c81">{{ cov.KE }}</span></figcaption>
+        <canvas data-view="KE" style="width:100%;display:block"></canvas>
+      </figure>
+      <figure style="flex:27.3 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:6px">
+        <figcaption style="display:flex;flex-wrap:wrap;gap:4px 8px;font:500 11px 'IBM Plex Mono',monospace;color:#3d3f44"><b>05</b><span>Двір, східна частина</span><span style="color:#7a7c81">{{ cov.RS }}</span></figcaption>
+        <canvas data-view="RS:39.3:66.6" style="width:100%;display:block"></canvas>
+      </figure>
+      <figure style="flex:14 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:6px">
+        <figcaption style="display:flex;flex-wrap:wrap;gap:4px 8px;font:500 11px 'IBM Plex Mono',monospace;color:#3d3f44"><b>06</b><span>Торець, схід</span><span style="color:#7a7c81">{{ cov.RE }}</span></figcaption>
+        <canvas data-view="RE" style="width:100%;display:block"></canvas>
+      </figure>
+    </div>
+
+    <div style="width:85.2%;display:flex;gap:4px;align-items:flex-end">
+      <figure style="flex:66.6 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:6px">
+        <figcaption style="display:flex;flex-wrap:wrap;gap:4px 8px;font:500 11px 'IBM Plex Mono',monospace;color:#3d3f44"><b>07</b><span>Задній корпус, північ</span><span style="color:#7a7c81">{{ cov.RN }}</span></figcaption>
+        <canvas data-view="RN" style="width:100%;display:block"></canvas>
+      </figure>
+      <figure style="flex:14 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:6px">
+        <figcaption style="display:flex;flex-wrap:wrap;gap:4px 8px;font:500 11px 'IBM Plex Mono',monospace;color:#3d3f44"><b>08</b><span>Торець, захід</span><span style="color:#7a7c81">{{ cov.RW }}</span></figcaption>
+        <canvas data-view="RW" style="width:100%;display:block"></canvas>
+      </figure>
+    </div>
+
+    <div style="width:76.8%;display:flex;gap:4px;align-items:flex-end">
+      <figure style="flex:27.3 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:6px">
+        <figcaption style="display:flex;flex-wrap:wrap;gap:4px 8px;font:500 11px 'IBM Plex Mono',monospace;color:#3d3f44"><b>05</b><span>Двір, західна частина</span><span style="color:#7a7c81">{{ cov.RS }}</span></figcaption>
+        <canvas data-view="RS:0:27.3" style="width:100%;display:block"></canvas>
+      </figure>
+      <figure style="flex:18 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:6px">
+        <figcaption style="display:flex;flex-wrap:wrap;gap:4px 8px;font:500 11px 'IBM Plex Mono',monospace;color:#3d3f44"><b>09</b><span>Перехід, захід</span><span style="color:#7a7c81">{{ cov.KW }}</span></figcaption>
+        <canvas data-view="KW" style="width:100%;display:block"></canvas>
+      </figure>
+      <figure style="flex:27.3 1 0;min-width:0;margin:0;display:flex;flex-direction:column;gap:6px">
+        <figcaption style="display:flex;flex-wrap:wrap;gap:4px 8px;font:500 11px 'IBM Plex Mono',monospace;color:#3d3f44"><b>10</b><span>Тил класів</span><span style="color:#7a7c81">{{ cov.CB }}</span></figcaption>
+        <canvas data-view="CB" style="width:100%;display:block"></canvas>
+      </figure>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:28px">
+    <div style="font:500 12px 'IBM Plex Mono',monospace;color:#5c5e63">ФАСАДИ ОКРЕМО</div>
+    <figure style="margin:0;display:flex;flex-direction:column;gap:8px">
+      <figcaption style="display:flex;gap:10px;font:500 13px 'IBM Plex Mono',monospace"><b>01</b><span>Головний фасад · 66,6 м</span><span style="color:#7a7c81">покриття {{ cov.F_S }}</span></figcaption>
+      <canvas data-view="F_S:0:66.6:60" style="width:100%;display:block"></canvas>
+    </figure>
+    <figure style="margin:0;display:flex;flex-direction:column;gap:8px">
+      <figcaption style="display:flex;gap:10px;font:500 13px 'IBM Plex Mono',monospace"><b>05</b><span>Задній корпус, двір · 66,6 м</span><span style="color:#7a7c81">покриття {{ cov.RS }}</span></figcaption>
+      <canvas data-view="RS:0:66.6:60" style="width:100%;display:block"></canvas>
+    </figure>
+    <figure style="margin:0;display:flex;flex-direction:column;gap:8px">
+      <figcaption style="display:flex;gap:10px;font:500 13px 'IBM Plex Mono',monospace"><b>07</b><span>Задній корпус, північ · 66,6 м</span><span style="color:#7a7c81">покриття {{ cov.RN }}</span></figcaption>
+      <canvas data-view="RN:0:66.6:60" style="width:100%;display:block"></canvas>
+    </figure>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,380px),1fr));gap:28px 24px;align-items:end">
+      <figure style="margin:0;display:flex;flex-direction:column;gap:8px"><figcaption style="display:flex;gap:10px;font:500 13px 'IBM Plex Mono',monospace"><b>11</b><span>Торець, захід · 14 м</span><span style="color:#7a7c81">{{ cov.F_W }}</span></figcaption><canvas data-view="F_W:0:14:60" style="width:100%;display:block"></canvas></figure>
+      <figure style="margin:0;display:flex;flex-direction:column;gap:8px"><figcaption style="display:flex;gap:10px;font:500 13px 'IBM Plex Mono',monospace"><b>02</b><span>Торець, схід · 14 м</span><span style="color:#7a7c81">{{ cov.F_E }}</span></figcaption><canvas data-view="F_E:0:14:60" style="width:100%;display:block"></canvas></figure>
+      <figure style="margin:0;display:flex;flex-direction:column;gap:8px"><figcaption style="display:flex;gap:10px;font:500 13px 'IBM Plex Mono',monospace"><b>08</b><span>Торець заднього корпусу, захід · 14 м</span><span style="color:#7a7c81">{{ cov.RW }}</span></figcaption><canvas data-view="RW:0:14:60" style="width:100%;display:block"></canvas></figure>
+      <figure style="margin:0;display:flex;flex-direction:column;gap:8px"><figcaption style="display:flex;gap:10px;font:500 13px 'IBM Plex Mono',monospace"><b>06</b><span>Торець заднього корпусу, схід · 14 м</span><span style="color:#7a7c81">{{ cov.RE }}</span></figcaption><canvas data-view="RE:0:14:60" style="width:100%;display:block"></canvas></figure>
+      <figure style="margin:0;display:flex;flex-direction:column;gap:8px"><figcaption style="display:flex;gap:10px;font:500 13px 'IBM Plex Mono',monospace"><b>03</b><span>Тил блоку залів · 27,3 м</span><span style="color:#7a7c81">{{ cov.HB }}</span></figcaption><canvas data-view="HB:0:27.3:50" style="width:100%;display:block"></canvas></figure>
+      <figure style="margin:0;display:flex;flex-direction:column;gap:8px"><figcaption style="display:flex;gap:10px;font:500 13px 'IBM Plex Mono',monospace"><b>10</b><span>Тил класів · 27,3 м</span><span style="color:#7a7c81">{{ cov.CB }}</span></figcaption><canvas data-view="CB:0:27.3:50" style="width:100%;display:block"></canvas></figure>
+      <figure style="margin:0;display:flex;flex-direction:column;gap:8px"><figcaption style="display:flex;gap:10px;font:500 13px 'IBM Plex Mono',monospace"><b>04</b><span>Перехід, схід · 18 м</span><span style="color:#7a7c81">{{ cov.KE }}</span></figcaption><canvas data-view="KE:0:18:50" style="width:100%;display:block"></canvas></figure>
+      <figure style="margin:0;display:flex;flex-direction:column;gap:8px"><figcaption style="display:flex;gap:10px;font:500 13px 'IBM Plex Mono',monospace"><b>09</b><span>Перехід, захід · 18 м</span><span style="color:#7a7c81">{{ cov.KW }}</span></figcaption><canvas data-view="KW:0:18:50" style="width:100%;display:block"></canvas></figure>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { cov: {} };
+  rootRef = React.createRef();
+  async componentDidMount() {
+    const G = await import(new URL('./facade-graphics.js', document.baseURI).href);
+    const root = this.rootRef.current;
+    if (!root) return;
+    root.querySelectorAll('canvas[data-view]').forEach(cv => {
+      const [id, a, b, px] = cv.dataset.view.split(':');
+      G.drawFacade(cv, G.byId[id], { u0: a ? +a : undefined, u1: b ? +b : undefined, px: px ? +px : 40 });
+    });
+    const plan = root.querySelector('canvas[data-plan]');
+    if (plan) G.drawPlan(plan);
+    const cov = {};
+    G.FACADES.forEach(f => { cov[f.id] = Math.round(G.coverage(f) * 100) + '%'; });
+    this.setState({ cov });
+  }
+  renderVals() {
+    return { rootRef: this.rootRef, cov: this.state.cov };
+  }
+}
+</script>
+</body>
+</html>

@@ -72,12 +72,23 @@
 <script src="three-d-stage.js"></script>
 <script type="module" src="lyceum-scene.js"></script>
 <script type="module">
+// ракурси в координатах моделі (як у lyceum-scene.js), переводяться в сцену через modelOffset
 const VIEWS = [
-  ['Фото-ракурс', [-37, 20, 47], [3, 3, 2], 38],
-  ['Вхід', [-6, 6.5, 26], [1.5, 2.6, 0], 42],
-  ['Витражі', [26, 9, 34], [22, 2.5, 0], 40],
-  ['Загальний', [-58, 34, 74], [0, 4, 0], 34],
+  ['Ракурс 1 · головний фасад', [-38, 34, 42], [26, 0, -16], 38],
+  ['Ракурс 2 · північ і торець', [-40, 36, -86], [30, 2, -30], 38],
+  ['Ракурс 3 · двір', [100, 34, -2], [42, 2, -22], 40],
+  ['Ракурс 4 · фронтально', [33, 46, 58], [33, 0, -18], 40],
 ];
+// зовнішні кути, через які проходять лінії: [назва, x, z, напрям назовні по x, по z, висота корпусу]
+const CORNERS = [
+  ['Кут 11/01', -0.5, 0, -1, 1, 7.4], ['Кут 01/02', 66.1, 0, 1, 1, 7.4], ['Кут 02/03', 66.1, -14, 1, -1, 7.4],
+  ['Кут 05/06', 66.1, -32, 1, 1, 10.8], ['Кут 06/07', 66.1, -46, 1, -1, 10.8], ['Кут 07/08', -0.5, -46, -1, -1, 10.8],
+  ['Кут 08/05', -0.5, -32, -1, 1, 10.8], ['Кут 10/11', -0.5, -14, -1, -1, 7.4],
+];
+CORNERS.forEach(([n, x, z, sx, sz, h]) => {
+  const d = h * 0.95;
+  VIEWS.push([n, [x + sx * d, h * 0.62, z + sz * d], [x, h * 0.42, z], 50]);
+});
 
 const view = await new Promise((res) => {
   if (window.lyceumView) return res(window.lyceumView);
@@ -89,22 +100,25 @@ const sr = view.stage.shadowRoot;
 sr.querySelectorAll('.toolbar, .note').forEach((el) => { el.style.display = 'none'; });
 
 const ui = document.getElementById('ui');
+const O = view.modelOffset;
 function go(btn, [pos, tgt, fov]) {
   ui.querySelectorAll('button').forEach((b) => b.removeAttribute('data-on'));
   btn.setAttribute('data-on', '');
-  view.camera.position.set(...pos);
+  view.camera.position.set(pos[0] + O.x, pos[1] + O.y, pos[2] + O.z);
   view.camera.fov = fov;
   view.camera.updateProjectionMatrix();
-  view.controls.target.set(...tgt);
+  view.controls.target.set(tgt[0] + O.x, tgt[1] + O.y, tgt[2] + O.z);
   view.controls.update();
+  view.renderer.render(view.scene, view.camera);
 }
 VIEWS.forEach(([label, pos, tgt, fov], i) => {
   const b = document.createElement('button');
   b.textContent = label;
   b.addEventListener('click', () => go(b, [pos, tgt, fov]));
   ui.appendChild(b);
-  if (i === 0) b.setAttribute('data-on', '');
+  if (i === 0) go(b, [pos, tgt, fov]);
 });
+window.goView = (i) => go(ui.querySelectorAll('button')[i], VIEWS[i].slice(1));
 
 const save = document.createElement('button');
 save.textContent = 'Зберегти PNG';
